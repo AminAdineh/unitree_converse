@@ -33,6 +33,40 @@ The setup script will ask whether you are setting up on the **Unitree G1 Jetson*
 
 ---
 
+## Jetson with Ubuntu 22.04 (Ethernet, one command)
+
+`setup.sh` targets the documented robot image (Ubuntu 20.04 / ROS 2 Foxy). If your
+G1's Jetson runs **Ubuntu 22.04**, use `install_jetson.sh` instead. It checks
+prerequisites first, then installs, then verifies. It never sends a command to the
+robot and never enables auto-start at boot.
+
+```bash
+# on the Jetson, with the Ethernet cable to the robot connected
+git clone --recurse-submodules https://github.com/SaxionMechatronics/unitree_converse.git
+cd unitree_converse
+./install_jetson.sh --check     # report only, changes nothing
+./install_jetson.sh             # check -> confirm -> install -> verify
+```
+
+| Option | What it does |
+|--------|--------------|
+| `--check` | Prerequisite report only, nothing is changed |
+| `--install` | Preflight, then install (asks before starting) |
+| `--verify` | Verification only, nothing is started |
+| `--yes` | Do not ask for confirmation |
+
+Notes:
+
+- The Jetson needs internet access for packages, the ~3 GB of models and `llama3.2`.
+  An offline install is not supported.
+- The robot link must give the Jetson `192.168.123.164` on `eth0`; the script reports
+  the interface and address it actually finds and writes `~/cyclonedds_ws/cyclonedds.xml`
+  if it is missing.
+- Anything it cannot do safely — such as building `g1_piper_tts` — is listed as a
+  manual step at the end, together with the commands to start the pipeline by hand.
+- It makes `src/bob_llm/bob_llm/llm_node.py` executable (adding the missing shebang),
+  without which the launch file cannot start the LLM node.
+
 ## Architecture
 
 ![unitree_converse architecture](unitree_converse_architecture.svg)
