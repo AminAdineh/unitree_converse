@@ -130,8 +130,15 @@ detect_system() {
   year="$(date +%Y)"
   if [ "$year" -lt 2024 ]; then
     CLOCK_OK=0
-    warn "System clock reads $(date '+%Y-%m-%d %H:%M') — HTTPS downloads will fail with certificate errors."
+    local clock_msg="System clock reads $(date '+%Y-%m-%d %H:%M') — every HTTPS download fails with a certificate error until it is correct."
+    # An online install cannot proceed with a 1970 clock; an offline one does not care.
+    if [ "$OFFLINE" -eq 1 ]; then
+      warn "$clock_msg"
+    else
+      fail "$clock_msg"
+    fi
     note "Fix first:  sudo date -s 'YYYY-MM-DD HH:MM:SS'   (or: sudo timedatectl set-ntp true)"
+    note "Then re-run this script — or add --offline to install from a local bundle."
   else
     ok "Clock: $(date '+%Y-%m-%d %H:%M')"
   fi
