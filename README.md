@@ -155,8 +155,10 @@ tts_node → subprocess: g1_piper_tts eth0 < text
                └── AudioClient::PlayStream() → RockChip → Speaker
 ```
 
-Source: `~/unitree_sdk2_latest/example/g1/audio/g1_piper_tts.cpp`
+Source: `tools/g1_piper_tts/g1_piper_tts.cpp` (this repository), built inside `unitree_sdk2`
 Binary: `~/unitree_sdk2_latest/build/bin/g1_piper_tts`
+
+Build it with the steps in [tools/g1_piper_tts/README.md](tools/g1_piper_tts/README.md).
 
 ---
 
@@ -322,9 +324,10 @@ python3 -c "from faster_whisper import WhisperModel; WhisperModel('base', device
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull llama3.2
 
-# Build g1_piper_tts C++ binary
+# Build g1_piper_tts C++ binary (source ships with this repository)
 git clone https://github.com/unitreerobotics/unitree_sdk2.git unitree_sdk2_latest
-# Add g1_piper_tts.cpp to example/g1/audio/ and update CMakeLists.txt
+cp ~/unitree_converse/tools/g1_piper_tts/g1_piper_tts.cpp unitree_sdk2_latest/example/g1/audio/
+printf '\nadd_executable(g1_piper_tts audio/g1_piper_tts.cpp)\ntarget_link_libraries(g1_piper_tts unitree_sdk2)\n' >> unitree_sdk2_latest/example/g1/CMakeLists.txt
 cd unitree_sdk2_latest/build && cmake .. && make g1_piper_tts -j$(nproc)
 
 # unitree_ros2 messages

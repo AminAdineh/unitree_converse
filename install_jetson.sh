@@ -238,7 +238,7 @@ detect_components() {
     ok "Speaker binary g1_piper_tts"
   else
     warn "Speaker binary missing: $tts_bin"
-    MANUAL+=("Build g1_piper_tts from unitree_sdk2 (example/g1/audio) — this script cannot supply that C++ source.")
+    MANUAL+=("Build g1_piper_tts: copy tools/g1_piper_tts/g1_piper_tts.cpp into ~/unitree_sdk2_latest/example/g1/audio/, add the add_executable/target_link_libraries lines to example/g1/CMakeLists.txt, then make g1_piper_tts (see tools/g1_piper_tts/README.md).")
     missing=1
   fi
 
