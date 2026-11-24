@@ -33,6 +33,73 @@ The setup script will ask whether you are setting up on the **Unitree G1 Jetson*
 
 ---
 
+## G1 Jetson, Ubuntu 20.04 / ROS 2 Foxy (recommended on the robot)
+
+`install_foxy.sh` is the installer for the stock G1 Jetson image, written so it is
+safe to run on a robot that is already in use:
+
+- **No package removals or upgrades.** Every `apt` step is simulated first; if it
+  would remove or upgrade anything, that step is refused and reported instead of
+  run. (`--allow-apt-changes` overrides, if you accept the change.)
+- **No auto-start.** No systemd unit is ever enabled. Ollama is only installed with
+  `--with-ollama`, and if its vendor script enables a service, that is undone.
+- **No repository edits.** The LLM node's missing shebang is only fixed with
+  `--allow-repo-edits`, which writes a `.bak` and prints the revert command.
+- **No robot commands.** Only audio playback is ever exercised, and only by the
+  command it prints at the end.
+- **Works offline.** `--offline --bundle DIR` skips every download and installs
+  from a local bundle (Piper binary, voice model, pip wheels).
+- **Builds the speaker bridge.** `g1_piper_tts` is compiled from
+  `tools/g1_piper_tts/` — no missing source.
+
+```bash
+cd ~/unitree_converse
+./install_foxy.sh --check                  # report only, changes nothing
+./install_foxy.sh --install                # check -> confirm -> install -> verify
+./install_foxy.sh --install --offline --bundle ~/unitree_offline_bundle
+./install_foxy.sh --verify                 # verification only
+```
+
+If the Jetson's clock reads 1970 or DNS is down, HTTPS downloads fail with
+certificate errors. Fix the clock first (`sudo date -s 'YYYY-MM-DD HH:MM:SS'`), then
+DNS (`cat /etc/resolv.conf`), then re-run. The script detects both and says so.
+
+---
+
+## Jetson with Ubuntu 22.04 (Ethernet, one command)
+
+`setup.sh` targets the documented robot image (Ubuntu 20.04 / ROS 2 Foxy). If your
+G1's Jetson runs **Ubuntu 22.04**, use `install_jetson.sh` instead. It checks
+prerequisites first, then installs, then verifies. It never sends a command to the
+robot and never enables auto-start at boot.
+
+```bash
+# on the Jetson, with the Ethernet cable to the robot connected
+git clone --recurse-submodules https://github.com/SaxionMechatronics/unitree_converse.git
+cd unitree_converse
+./install_jetson.sh --check     # report only, changes nothing
+./install_jetson.sh             # check -> confirm -> install -> verify
+```
+
+| Option | What it does |
+|--------|--------------|
+| `--check` | Prerequisite report only, nothing is changed |
+| `--install` | Preflight, then install (asks before starting) |
+| `--verify` | Verification only, nothing is started |
+| `--yes` | Do not ask for confirmation |
+
+Notes:
+
+- The Jetson needs internet access for packages, the ~3 GB of models and `llama3.2`.
+  An offline install is not supported.
+- The robot link must give the Jetson `192.168.123.164` on `eth0`; the script reports
+  the interface and address it actually finds and writes `~/cyclonedds_ws/cyclonedds.xml`
+  if it is missing.
+- Anything it cannot do safely — such as building `g1_piper_tts` — is listed as a
+  manual step at the end, together with the commands to start the pipeline by hand.
+- It makes `src/bob_llm/bob_llm/llm_node.py` executable (adding the missing shebang),
+  without which the launch file cannot start the LLM node.
+
 ## Architecture
 
 ![unitree_converse architecture](unitree_converse_architecture.svg)
@@ -121,8 +188,10 @@ tts_node → subprocess: g1_piper_tts eth0 < text
                └── AudioClient::PlayStream() → RockChip → Speaker
 ```
 
-Source: `~/unitree_sdk2_latest/example/g1/audio/g1_piper_tts.cpp`
+Source: `tools/g1_piper_tts/g1_piper_tts.cpp` (this repository), built inside `unitree_sdk2`
 Binary: `~/unitree_sdk2_latest/build/bin/g1_piper_tts`
+
+Build it with the steps in [tools/g1_piper_tts/README.md](tools/g1_piper_tts/README.md).
 
 ---
 
@@ -288,9 +357,10 @@ python3 -c "from faster_whisper import WhisperModel; WhisperModel('base', device
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull llama3.2
 
-# Build g1_piper_tts C++ binary
+# Build g1_piper_tts C++ binary (source ships with this repository)
 git clone https://github.com/unitreerobotics/unitree_sdk2.git unitree_sdk2_latest
-# Add g1_piper_tts.cpp to example/g1/audio/ and update CMakeLists.txt
+cp ~/unitree_converse/tools/g1_piper_tts/g1_piper_tts.cpp unitree_sdk2_latest/example/g1/audio/
+printf '\nadd_executable(g1_piper_tts audio/g1_piper_tts.cpp)\ntarget_link_libraries(g1_piper_tts unitree_sdk2)\n' >> unitree_sdk2_latest/example/g1/CMakeLists.txt
 cd unitree_sdk2_latest/build && cmake .. && make g1_piper_tts -j$(nproc)
 
 # unitree_ros2 messages
