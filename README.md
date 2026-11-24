@@ -33,6 +33,39 @@ The setup script will ask whether you are setting up on the **Unitree G1 Jetson*
 
 ---
 
+## G1 Jetson, Ubuntu 20.04 / ROS 2 Foxy (recommended on the robot)
+
+`install_foxy.sh` is the installer for the stock G1 Jetson image, written so it is
+safe to run on a robot that is already in use:
+
+- **No package removals or upgrades.** Every `apt` step is simulated first; if it
+  would remove or upgrade anything, that step is refused and reported instead of
+  run. (`--allow-apt-changes` overrides, if you accept the change.)
+- **No auto-start.** No systemd unit is ever enabled. Ollama is only installed with
+  `--with-ollama`, and if its vendor script enables a service, that is undone.
+- **No repository edits.** The LLM node's missing shebang is only fixed with
+  `--allow-repo-edits`, which writes a `.bak` and prints the revert command.
+- **No robot commands.** Only audio playback is ever exercised, and only by the
+  command it prints at the end.
+- **Works offline.** `--offline --bundle DIR` skips every download and installs
+  from a local bundle (Piper binary, voice model, pip wheels).
+- **Builds the speaker bridge.** `g1_piper_tts` is compiled from
+  `tools/g1_piper_tts/` — no missing source.
+
+```bash
+cd ~/unitree_converse
+./install_foxy.sh --check                  # report only, changes nothing
+./install_foxy.sh --install                # check -> confirm -> install -> verify
+./install_foxy.sh --install --offline --bundle ~/unitree_offline_bundle
+./install_foxy.sh --verify                 # verification only
+```
+
+If the Jetson's clock reads 1970 or DNS is down, HTTPS downloads fail with
+certificate errors. Fix the clock first (`sudo date -s 'YYYY-MM-DD HH:MM:SS'`), then
+DNS (`cat /etc/resolv.conf`), then re-run. The script detects both and says so.
+
+---
+
 ## Jetson with Ubuntu 22.04 (Ethernet, one command)
 
 `setup.sh` targets the documented robot image (Ubuntu 20.04 / ROS 2 Foxy). If your
